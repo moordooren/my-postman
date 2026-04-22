@@ -104,7 +104,7 @@ if uploaded_file:
             # Стало:
             header_text = (
                 f"Собственнику кв. (пом.) № {row['Помещение']} в доме № {row['Дом']} по\n"
-                f"ул. {row['Улица']} в г. {row['Город']}\n"
+                f"ул. {row['Улица']} в г. {row['Город']}\n" 
                 f"{row['ФИО должника']}\n\n"
                 f"От: {vzyskatel_type} {vzyskatel_name}\n"
                 f"ОГРН {vzyskatel_ogrn}\n"
