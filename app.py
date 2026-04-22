@@ -16,12 +16,21 @@ except ImportError:
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ И СТИЛИ ---
 st.set_page_config(page_title="ЖКХелпер Pro", page_icon="⚖️", layout="wide")
 
-# Скрываем служебные элементы Streamlit
+# --- СКРЫВАЕМ ЛИШНИЕ ЭЛЕМЕНТЫ, НО ОСТАВЛЯЕМ КНОПКУ РАЗВЕРТЫВАНИЯ ---
 hide_st_style = """
             <style>
             #MainMenu {visibility: hidden;}
             footer {visibility: hidden;}
-            header {visibility: hidden;}
+            /* Прячем только фон хедера, но не саму кнопку */
+            header[data-testid="stHeader"] {
+                background: rgba(0,0,0,0);
+                color: rgba(0,0,0,0);
+            }
+            /* Делаем кнопку открытия сайдбара видимой и синей, чтобы не терялась */
+            button[kind="header"] {
+                visibility: visible !format;
+                color: #2e77d1 !important;
+            }
             </style>
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
