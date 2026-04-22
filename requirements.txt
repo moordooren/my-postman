@@ -3,3 +3,5 @@ pandas
 python-docx
 openpyxl
 num2words
+openai
+docxtpl
