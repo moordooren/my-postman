@@ -5,3 +5,4 @@ openpyxl
 num2words
 openai
 pdfplumber
+google-generativeai
