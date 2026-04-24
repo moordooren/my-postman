@@ -3,6 +3,5 @@ pandas
 python-docx
 openpyxl
 num2words
-openai
-pdfplumber
-google-generativeai
+pymupdf
+google-generativeai>=0.8.3
