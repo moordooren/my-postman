@@ -4,4 +4,4 @@ python-docx
 openpyxl
 num2words
 pymupdf
-google-generativeai>=0.8.3
+openai>=1.0.0
