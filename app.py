@@ -6,9 +6,9 @@ from docx.enum.text import WD_ALIGN_PARAGRAPH
 from io import BytesIO
 from num2words import num2words
 import datetime
+from openai import OpenAI
 import os
 import fitz  # PyMuPDF
-import google.generativeai as genai
 
 # --- 1. НАСТРОЙКИ СТРАНИЦЫ ---
 st.set_page_config(page_title="ЖКХелпер Pro", page_icon="⚖️", layout="wide")
