@@ -5,3 +5,4 @@ openpyxl
 num2words
 pymupdf
 openai>=1.0.0
+gigachat
