@@ -169,16 +169,46 @@ elif page == "3. Исполнительное производство":
 elif page == "4. Чат-помощник ИИ":
     st.header("🤖 Юридический консультант")
     
+    # Читаем ключи из переменных окружения (установлены в Amvera)
+    giga_client_id = os.getenv("GIGACHAT_CLIENT_ID")
+    giga_secret = os.getenv("GIGACHAT_SECRET")
+    giga_scope = os.getenv("GIGACHAT_SCOPE", "GIGACHAT_API_PERS")
+    
+    if st.checkbox("Диагностика связи с ИИ"):
+        if giga_client_id and giga_secret:
+            try:
+                from gigachat import GigaChat
+                with GigaChat(credentials=giga_secret, scope=giga_scope, verify_ssl_certs=False) as giga:
+                    st.success("✅ GigaChat доступен")
+            except Exception as e:
+                st.error(f"Ошибка подключения: {e}")
+        else:
+            st.error("❌ Не найдены переменные GIGACHAT_CLIENT_ID и GIGACHAT_SECRET")
+    
     law_choice = st.selectbox("Выберите постановление:", ["ПП РФ №354", "ПП РФ №491", "ПП РФ №416"])
     user_q = st.text_area("Опишите ситуацию подробно:", height=250)
     
     if st.button("🚀 Провести полный юридический аудит"):
-        st.info("🔧 Функция ИИ временно находится в настройке. Юридический консультант будет доступен в ближайшее время.")
-        st.markdown("---")
-        st.subheader("📋 Предварительный ответ (демо-режим):")
-        st.markdown(f"Вы выбрали закон: **{law_choice}**")
-        st.markdown(f"Ваш вопрос: *{user_q}*")
-        st.markdown("> Специалист изучит ваш вопрос и даст развёрнутый ответ после того, как будет подключён API. Приносим извинения за временные неудобства.")
-
+        if not (giga_client_id and giga_secret):
+            st.error("Ключи GigaChat не настроены")
+        else:
+            file_path = f"knowledge_base/{law_choice}.pdf"
+            if os.path.exists(file_path):
+                with st.spinner("⏳ Анализирую закон..."):
+                    full_text = get_full_text_from_pdf(file_path)
+                    try:
+                        from gigachat import GigaChat
+                        with GigaChat(credentials=giga_secret, scope=giga_scope, verify_ssl_certs=False) as giga:
+                            prompt = f"Ты эксперт ЖКХ. Отвечай строго по закону {law_choice}. Ссылайся на пункты.\n\nЗакон:\n{full_text}\n\nВопрос:\n{user_q}"
+                            response = giga.chat(prompt)
+                            answer = response.choices[0].message.content
+                            st.markdown("---")
+                            st.subheader("📋 Экспертное заключение:")
+                            st.markdown(answer)
+                    except Exception as e:
+                        st.error(f"Ошибка ИИ: {e}")
+            else:
+                st.error("Файл базы знаний не найден")
+                
 st.markdown("---")
 st.caption("🔒 Stateless: Данные удаляются при закрытии страницы.")
