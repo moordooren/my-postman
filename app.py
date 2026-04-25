@@ -28,7 +28,7 @@ GEMINI_KEY = os.getenv("GEMINI_API_KEY")
 if GEMINI_KEY:
     genai.configure(api_key=GEMINI_KEY)
 
-# --- 3. ВСПОМОГАТЕЛЬНЫЕ ФУНКЦИИ ---
+# --- 3. ФУНКЦИИ ---
 
 def sum_to_words(amount):
     try:
@@ -46,7 +46,7 @@ def get_full_text_from_pdf(file_path):
         doc.close()
         return full_text
     except Exception as e:
-        return f"Ошибка чтения PDF: {e}"
+        return f"Ошибка чтения: {e}"
 
 def calc_gosposhlina(debt):
     duty = debt * 0.02
@@ -61,7 +61,7 @@ def create_sample_excel():
         df.to_excel(writer, index=False)
     return output.getvalue()
 
-# --- 4. БОКОВАЯ ПАНЕЛЬ ---
+# --- 4. САЙДБАР ---
 with st.sidebar:
     st.title("⚖️ ЖКХелпер Pro")
     page = st.radio("Навигация:", ["1. Уведомления", "2. Судебные приказы", "3. Исполнительное производство", "4. Чат-помощник ИИ"])
@@ -75,124 +75,81 @@ with st.sidebar:
     s_pos = st.text_input("Должность подписанта", "Председатель Правления")
     s_name = st.text_input("ФИО подписанта", "А.А. Оботуров")
     st.markdown("---")
-    st.caption("Версия 2.0 Pro | 2.5GB RAM | FZ-152")
+    st.caption("Версия 2.1 Pro | 2.5GB RAM | FZ-152")
 
 # --- 5. ЛОГИКА СТРАНИЦ ---
 
 if page == "1. Уведомления":
     st.header("📬 Массовая генерация уведомлений")
-    uploaded_file = st.file_uploader("Загрузите Excel с должниками", type="xlsx")
-    
-    if not uploaded_file:
-        st.download_button("📥 Скачать образец Excel", create_sample_excel(), "sample_jkh.xlsx")
-    
+    uploaded_file = st.file_uploader("Загрузите Excel", type="xlsx")
+    if not uploaded_file: st.download_button("📥 Скачать образец Excel", create_sample_excel(), "sample_jkh.xlsx")
     if uploaded_file:
         df = pd.read_excel(uploaded_file)
-        st.success(f"Файл загружен. Строк: {len(df)}")
-        
         if st.button("🚀 Сформировать пакет уведомлений"):
             doc = Document()
-            style = doc.styles['Normal']
-            style.font.name = 'Times New Roman'
-            style.font.size = Pt(12)
-
-            processed_count = 0
+            style = doc.styles['Normal']; style.font.name = 'Times New Roman'; style.font.size = Pt(12)
             for index, row in df.iterrows():
                 try:
                     val_sod = float(row.get('Долг содержания', 0)) if pd.notna(row.get('Долг содержания')) else 0
                     val_kap = float(row.get('Долг капремонт', 0)) if pd.notna(row.get('Долг капремонт')) else 0
                 except: val_sod, val_kap = 0, 0
-                
                 if val_sod <= 0 and val_kap <= 0: continue
-                processed_count += 1
-                
-                header = doc.add_paragraph(); header.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                header.add_run(f"Собственнику кв. (пом.) № {row['Помещение']} в доме № {row['Дом']} по\nул. {row['Улица']} в г. {row['Город']}\n{row['ФИО должника']}\n\nОт: {v_type} {v_name}\nОГРН {v_ogrn}\nИНН/КПП {v_inn}\nЮр. адрес: {v_addr}\n")
-                
-                title = doc.add_paragraph(); title.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                title.add_run("\nДОСУДЕБНОЕ УВЕДОМЛЕНИЕ").bold = True
-
+                h = doc.add_paragraph(); h.alignment = WD_ALIGN_PARAGRAPH.RIGHT
+                h.add_run(f"Собственнику кв. (пом.) № {row['Помещение']} в доме № {row['Дом']} по\nул. {row['Улица']} в г. {row['Город']}\n{row['ФИО должника']}\n\nОт: {v_type} {v_name}\nОГРН {v_ogrn}\nИНН/КПП {v_inn}\nЮр. адрес: {v_addr}\n")
+                t = doc.add_paragraph(); t.alignment = WD_ALIGN_PARAGRAPH.CENTER; t.add_run("\nДОСУДЕБНОЕ УВЕДОМЛЕНИЕ").bold = True
                 debt_phrases = []
                 if val_sod > 0:
                     p_sod = str(row['Период содержания']).strip() if pd.notna(row.get('Период содержания')) and str(row.get('Период содержания')).strip() != "" else "____________________"
                     debt_phrases.append(f"за содержание жилья составляет {val_sod} руб. ({sum_to_words(val_sod)}) за период {p_sod}")
-                
                 if val_kap > 0:
                     p_kap = str(row['Период капремонт']).strip() if pd.notna(row.get('Период капремонт')) and str(row.get('Период капремонт')).strip() != "" else "____________________"
                     debt_phrases.append(f"за капитальный ремонт: {val_kap} руб. ({sum_to_words(val_kap)}) за период {p_kap}")
-                
-                debt_full_str = " и ".join(debt_phrases)
-                today = datetime.date.today().strftime('%d.%m.%Y')
-
-                paragraphs = [
-                    f"{v_type} {v_name} доводит до Вашего сведения, что Ваша задолженность на {today} г. по оплате {debt_full_str}.",
-                    "Согласно ст. 153 Жилищного кодекса РФ, граждане обязаны своевременно и полностью вносить плату за жилое помещение и коммунальные услуги.",
-                    "В соответствии с ч. 14 ст. 155 Жилищного кодекса Российской Федерации лица, несвоевременно и (или) не полностью внесшие плату за жилое помещение и коммунальные услуги (должники), обязаны уплатить кредитору пени в размере одной трехсотой ставки рефинансирования ЦБ РФ, действующей на момент оплаты, от невыплаченных в срок сумм за каждый день просрочки, начиная со следующего дня после наступления установленного срока оплаты по день фактической выплаты включительно.",
-                    "В случае непогашения Вами вышеуказанной суммы задолженности в течение 10 дней со дня получения Вами настоящего уведомления, мы будем вынуждены обратиться в суд с заявлением о взыскании имеющейся задолженности и пени с отнесением на Вас судебных расходов, связанных с рассмотрением дела (государственной пошлины, расходов на оплату услуг представителя).",
-                    "Убедительно просим погасить задолженность.",
-                    f"По возникшим вопросам Вы можете обратиться в Правление {v_type} {v_name}."
-                ]
-
+                full_debt_text = " и ".join(debt_phrases)
+                paragraphs = [f"{v_type} {v_name} доводит до Вашего сведения, что Ваша задолженность на {datetime.date.today().strftime('%d.%m.%Y')} г. по оплате {full_debt_text}.", "Согласно ст. 153 Жилищного кодекса РФ, граждане обязаны своевременно и полностью вносить плату за жилое помещение и коммунальные услуги.", "В соответствии с ч. 14 ст. 155 Жилищного кодекса Российской Федерации лица, несвоевременно и (или) не полностью внесшие плату за жилое помещение и коммунальные услуги (должники), обязаны уплатить кредитору пени в размере одной трехсотой ставки рефинансирования ЦБ РФ, действующей на момент оплаты...", "Убедительно просим погасить задолженность.", f"По возникшим вопросам Вы можете обратиться в Правление {v_type} {v_name}."]
                 for text in paragraphs:
                     p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
                     p.paragraph_format.first_line_indent = Cm(1.25); p.add_run(text)
-
-                footer = doc.add_paragraph(); footer.paragraph_format.space_before = Pt(18)
-                footer.add_run(f"{s_pos} {v_type} {v_name}\n\n{s_name}____________________")
+                f = doc.add_paragraph(); f.paragraph_format.space_before = Pt(18); f.add_run(f"{s_pos} {v_type} {v_name}\n\n{s_name}____________________")
                 if index < len(df) - 1: doc.add_page_break()
-
-            if processed_count > 0:
-                target_doc = BytesIO(); doc.save(target_doc); target_doc.seek(0)
-                st.download_button(label="📥 СКАЧАТЬ ПАКЕТ УВЕДОМЛЕНИЙ", data=target_doc, file_name="uvedomleniya.docx")
-
-    st.markdown("---")
-    st.subheader("📖 Инструкция по работе")
-    st.info("1. Заполните данные взыскателя слева. 2. Скачайте образец. 3. Загрузите ваш Excel. 4. Нажмите Сформировать.")
-
-elif page == "2. Судебные приказы":
-    st.header("⚖️ Заявления на судебный приказ")
-    uploaded_court = st.file_uploader("Загрузите Excel для суда", type="xlsx")
-    if uploaded_court:
-        df_c = pd.read_excel(uploaded_court)
-        if st.button("🚀 Сформировать заявления"):
-            doc = Document()
-            for idx, row in df_c.iterrows():
-                debt = float(row.get('Долг содержания', 0)) + float(row.get('Долг капремонт', 0))
-                duty = calc_gosposhlina(debt)
-                h = doc.add_paragraph(); h.alignment = WD_ALIGN_PARAGRAPH.RIGHT
-                h.add_run(f"В Мировой суд г. {row.get('Город')}\nВзыскатель: {v_type} {v_name}\nДолжник: {row['ФИО должника']}")
-                t = doc.add_paragraph(); t.alignment = WD_ALIGN_PARAGRAPH.CENTER
-                t.add_run("\nЗАЯВЛЕНИЕ О ВЫДАЧЕ СУДЕБНОГО ПРИКАЗА").bold = True
-                p = doc.add_paragraph(); p.alignment = WD_ALIGN_PARAGRAPH.JUSTIFY
-                p.add_run(f"Просим взыскать задолженность {debt} руб. и госпошлину {duty} руб.")
-                if idx < len(df_c) - 1: doc.add_page_break()
-            target_c = BytesIO(); doc.save(target_c)
-            st.download_button("📥 Скачать заявления", target_c.getvalue(), "court_orders.docx")
+            out = BytesIO(); doc.save(out); st.download_button(label="📥 СКАЧАТЬ ПАКЕТ УВЕДОМЛЕНИЙ", data=out.getvalue(), file_name="uvedomleniya.docx")
 
 elif page == "4. Чат-помощник ИИ":
-    st.header("🤖 Юридический консультант (Gemini Pro)")
+    st.header("🤖 Юридический консультант")
+    
+    # Кнопка диагностики (только для владельца)
+    if st.checkbox("Диагностика связи с ИИ"):
+        try:
+            models = [m.name for m in genai.list_models()]
+            st.write("Доступные модели на сервере:", models)
+        except Exception as e:
+            st.error(f"Сервер Google недоступен из Москвы: {e}")
+            st.info("Похоже, Google блокирует запросы с российских IP. Нам нужно перейти на GigaChat или YandexGPT (это бесплатно и официально в РФ).")
+
     law_choice = st.selectbox("Выберите постановление:", ["ПП РФ №354", "ПП РФ №491", "ПП РФ №416"])
     user_q = st.text_area("Опишите ситуацию подробно:", height=250)
     
     if st.button("🚀 Провести полный юридический аудит"):
         if not GEMINI_KEY:
-            st.error("Ключ API не найден в переменных Amvera.")
+            st.error("Ключ API не найден.")
         else:
             file_path = f"knowledge_base/{law_choice}.pdf"
             if os.path.exists(file_path):
-                with st.spinner("⏳ ИИ читает весь документ и анализирует..."):
+                with st.spinner("⏳ Изучаю закон..."):
                     full_text = get_full_text_from_pdf(file_path)
                     try:
-                        # Используем модель PRO для стабильности
-                        model = genai.GenerativeModel('gemini-1.5-pro')
-                        prompt = f"Ты ведущий юрист ЖКХ. Проанализируй ситуацию на основе ВСЕГО текста закона {law_choice}. Ссылайся на пункты. Сделай вывод о правомерности и укажи риски.\n\nЗАКОН:\n{full_text}\n\nСИТУАЦИЯ:\n{user_q}"
+                        # Используем максимально простую инициализацию
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        prompt = f"Ты эксперт ЖКХ. Отвечай строго по закону {law_choice}. Ссылайся на пункты.\n\nЗАКОН:\n{full_text}\n\nСИТУАЦИЯ:\n{user_q}"
                         response = model.generate_content(prompt)
                         st.markdown("---")
                         st.subheader("📋 Экспертное заключение:")
                         st.markdown(response.text)
                     except Exception as e:
-                        st.error(f"Ошибка ИИ: {e}")
-            else: st.error("Файл не найден в папке knowledge_base.")
+                        if "404" in str(e):
+                            st.error("Ошибка 404: Google не нашел модель. Скорее всего, это блокировка по IP (Россия).")
+                        else:
+                            st.error(f"Ошибка ИИ: {e}")
+            else: st.error("Файл не найден.")
 
 st.markdown("---")
 st.caption("🔒 Stateless: Данные удаляются при закрытии страницы.")
