@@ -168,46 +168,16 @@ elif page == "3. Исполнительное производство":
 elif page == "4. Чат-помощник ИИ":
     st.header("🤖 Юридический консультант")
     
-    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
-    
-    if st.checkbox("Диагностика связи с ИИ"):
-        if deepseek_key:
-            st.success("✅ API-ключ DeepSeek найден. ИИ готов к работе.")
-        else:
-            st.error("❌ API-ключ DeepSeek не найден. Добавьте DEEPSEEK_API_KEY в переменные окружения Amvera.")
-    
     law_choice = st.selectbox("Выберите постановление:", ["ПП РФ №354", "ПП РФ №491", "ПП РФ №416"])
     user_q = st.text_area("Опишите ситуацию подробно:", height=250)
     
     if st.button("🚀 Провести полный юридический аудит"):
-        if not deepseek_key:
-            st.error("Ключ API DeepSeek не найден. Добавьте переменную DEEPSEEK_API_KEY в Amvera.")
-        else:
-            file_path = f"knowledge_base/{law_choice}.pdf"
-            if os.path.exists(file_path):
-                with st.spinner("⏳ Изучаю закон..."):
-                    full_text = get_full_text_from_pdf(file_path)
-                    try:
-                        client = OpenAI(
-                            api_key=deepseek_key,
-                            base_url="https://api.deepseek.com/v1"
-                        )
-                        response = client.chat.completions.create(
-                            model="deepseek-chat",
-                            messages=[
-                                {"role": "system", "content": f"Ты эксперт ЖКХ. Отвечай строго по закону {law_choice}. Ссылайся на пункты."},
-                                {"role": "user", "content": f"Закон:\n{full_text}\n\nВопрос пользователя:\n{user_q}"}
-                            ],
-                            temperature=0.3
-                        )
-                        answer = response.choices[0].message.content
-                        st.markdown("---")
-                        st.subheader("📋 Экспертное заключение:")
-                        st.markdown(answer)
-                    except Exception as e:
-                        st.error(f"Ошибка при обращении к DeepSeek: {e}")
-            else:
-                st.error(f"Файл {file_path} не найден. Убедитесь, что папка knowledge_base существует и содержит {law_choice}.pdf")
+        st.info("🔧 Функция ИИ временно находится в настройке. Юридический консультант будет доступен в ближайшее время.")
+        st.markdown("---")
+        st.subheader("📋 Предварительный ответ (демо-режим):")
+        st.markdown(f"Вы выбрали закон: **{law_choice}**")
+        st.markdown(f"Ваш вопрос: *{user_q}*")
+        st.markdown("> Специалист изучит ваш вопрос и даст развёрнутый ответ после того, как будет подключён API. Приносим извинения за временные неудобства.")
 
 st.markdown("---")
 st.caption("🔒 Stateless: Данные удаляются при закрытии страницы.")
