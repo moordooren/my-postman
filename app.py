@@ -23,11 +23,6 @@ hide_st_style = """
             """
 st.markdown(hide_st_style, unsafe_allow_html=True)
 
-# --- 2. ПОДКЛЮЧЕНИЕ GEMINI ---
-GEMINI_KEY = os.getenv("GEMINI_API_KEY")
-if GEMINI_KEY:
-    genai.configure(api_key=GEMINI_KEY)
-
 # --- 3. ФУНКЦИИ ---
 
 def sum_to_words(amount):
@@ -113,43 +108,36 @@ if page == "1. Уведомления":
                 if index < len(df) - 1: doc.add_page_break()
             out = BytesIO(); doc.save(out); st.download_button(label="📥 СКАЧАТЬ ПАКЕТ УВЕДОМЛЕНИЙ", data=out.getvalue(), file_name="uvedomleniya.docx")
 
-elif page == "4. Чат-помощник ИИ":
-    st.header("🤖 Юридический консультант")
-    
-    # Кнопка диагностики (только для владельца)
-    if st.checkbox("Диагностика связи с ИИ"):
-        try:
-            models = [m.name for m in genai.list_models()]
-            st.write("Доступные модели на сервере:", models)
-        except Exception as e:
-            st.error(f"Сервер Google недоступен из Москвы: {e}")
-            st.info("Похоже, Google блокирует запросы с российских IP. Нам нужно перейти на GigaChat или YandexGPT (это бесплатно и официально в РФ).")
-
-    law_choice = st.selectbox("Выберите постановление:", ["ПП РФ №354", "ПП РФ №491", "ПП РФ №416"])
-    user_q = st.text_area("Опишите ситуацию подробно:", height=250)
-    
-    if st.button("🚀 Провести полный юридический аудит"):
-        if not GEMINI_KEY:
-            st.error("Ключ API не найден.")
+if st.button("🚀 Провести полный юридический аудит"):
+    deepseek_key = os.getenv("DEEPSEEK_API_KEY")
+    if not deepseek_key:
+        st.error("Ключ API DeepSeek не найден. Добавьте DEEPSEEK_API_KEY в переменные окружения Amvera.")
+    else:
+        file_path = f"knowledge_base/{law_choice}.pdf"
+        if os.path.exists(file_path):
+            with st.spinner("⏳ Изучаю закон..."):
+                full_text = get_full_text_from_pdf(file_path)
+                try:
+                    client = OpenAI(
+                        api_key=deepseek_key,
+                        base_url="https://api.deepseek.com/v1"
+                    )
+                    response = client.chat.completions.create(
+                        model="deepseek-chat",
+                        messages=[
+                            {"role": "system", "content": f"Ты эксперт ЖКХ. Отвечай строго по закону {law_choice}. Ссылайся на пункты."},
+                            {"role": "user", "content": f"Закон:\n{full_text}\n\nВопрос:\n{user_q}"}
+                        ],
+                        temperature=0.3
+                    )
+                    answer = response.choices[0].message.content
+                    st.markdown("---")
+                    st.subheader("📋 Экспертное заключение:")
+                    st.markdown(answer)
+                except Exception as e:
+                    st.error(f"Ошибка DeepSeek: {e}")
         else:
-            file_path = f"knowledge_base/{law_choice}.pdf"
-            if os.path.exists(file_path):
-                with st.spinner("⏳ Изучаю закон..."):
-                    full_text = get_full_text_from_pdf(file_path)
-                    try:
-                        # Используем максимально простую инициализацию
-                        model = genai.GenerativeModel('gemini-1.5-flash')
-                        prompt = f"Ты эксперт ЖКХ. Отвечай строго по закону {law_choice}. Ссылайся на пункты.\n\nЗАКОН:\n{full_text}\n\nСИТУАЦИЯ:\n{user_q}"
-                        response = model.generate_content(prompt)
-                        st.markdown("---")
-                        st.subheader("📋 Экспертное заключение:")
-                        st.markdown(response.text)
-                    except Exception as e:
-                        if "404" in str(e):
-                            st.error("Ошибка 404: Google не нашел модель. Скорее всего, это блокировка по IP (Россия).")
-                        else:
-                            st.error(f"Ошибка ИИ: {e}")
-            else: st.error("Файл не найден.")
+            st.error("Файл базы знаний не найден.")
 
 st.markdown("---")
 st.caption("🔒 Stateless: Данные удаляются при закрытии страницы.")
