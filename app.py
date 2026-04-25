@@ -140,18 +140,27 @@ elif page == "4. Чат-помощник ИИ":
             with st.spinner("⏳ ИИ читает весь документ и анализирует (до 40 сек)..."):
                 full_text = get_full_text_from_pdf(file_path)
                 try:
-                    # Исправленная инициализация модели
-                    model = genai.GenerativeModel(model_name='gemini-1.5-flash')
-                    prompt = f"Ты эксперт ЖКХ. Проанализируй ситуацию на основе ВСЕГО текста закона {law_choice}. Ссылайся на пункты. Сделай вывод о правомерности и укажи риски.\n\nЗАКОН:\n{full_text}\n\nСИТУАЦИЯ:\n{user_q}"
-                    
-                    response = model.generate_content(prompt)
-                    
-                    st.markdown("---")
-                    st.subheader("📋 Экспертное заключение:")
-                    st.markdown(response.text)
-                except Exception as e:
-                    st.error(f"Ошибка ИИ: {e}")
-        else: st.error("Файл не найден.")
+                        # Инициализируем модель без лишних параметров
+                        model = genai.GenerativeModel('gemini-1.5-flash')
+                        
+                        # Формируем запрос
+                        prompt = f"Ты эксперт ЖКХ. Проанализируй ситуацию на основе ВСЕГО текста закона {law_choice}. Ссылайся на пункты. Сделай вывод о правомерности и укажи риски.\n\nЗАКОН:\n{full_text}\n\nСИТУАЦИЯ:\n{user_q}"
+                        
+                        # Генерируем ответ
+                        response = model.generate_content(prompt)
+                        
+                        if response.text:
+                            st.markdown("---")
+                            st.subheader("📋 Экспертное заключение:")
+                            st.markdown(response.text)
+                        else:
+                            st.error("ИИ вернул пустой ответ. Попробуйте перефразировать вопрос.")
+                            
+                    except Exception as e:
+                        if "404" in str(e):
+                            st.error("Ошибка 404: Модель не найдена. Попробуйте изменить название модели в коде на 'gemini-1.5-pro' или проверьте настройки API ключа.")
+                        else:
+                            st.error(f"Ошибка ИИ: {e}")
 
 st.markdown("---")
 st.caption("🔒 Stateless: Данные удаляются при закрытии страницы.")
