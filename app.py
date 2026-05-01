@@ -195,7 +195,14 @@ elif page == "4. Чат-помощник ИИ":
             file_path = f"knowledge_base/{law_choice}.pdf"
             if os.path.exists(file_path):
                 with st.spinner("⏳ Анализирую закон..."):
-                    full_text = get_full_text_from_pdf(file_path)
+                                        full_text = get_full_text_from_pdf(file_path)
+                    
+                    # Обрезаем текст, чтобы не было ошибки 413
+                    MAX_CHARS = 7000
+                    if len(full_text) > MAX_CHARS:
+                        full_text = full_text[:MAX_CHARS] + "\n\n[Часть текста закона автоматически сокращена из-за технических ограничений]"
+                        st.info("ℹ️ Закон большой, анализирую самую важную часть.")
+                    
                     try:
                         from gigachat import GigaChat
                         with GigaChat(credentials=giga_secret, scope=giga_scope, verify_ssl_certs=False) as giga:
