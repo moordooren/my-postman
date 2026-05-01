@@ -195,8 +195,7 @@ elif page == "4. Чат-помощник ИИ":
             file_path = f"knowledge_base/{law_choice}.pdf"
             if os.path.exists(file_path):
                 with st.spinner("⏳ Анализирую закон..."):
-                                        full_text = get_full_text_from_pdf(file_path)
-                    
+                      full_text = get_full_text_from_pdf(file_path)
                     # Обрезаем текст, чтобы не было ошибки 413
                     MAX_CHARS = 7000
                     if len(full_text) > MAX_CHARS:
